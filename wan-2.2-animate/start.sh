@@ -27,7 +27,6 @@ fi
 echo "worker-comfyui: GPU available — $GPU_CHECK"
 
 
-
 # Ensure ComfyUI-Manager runs in offline network mode inside the container
 comfy-manager-set-mode offline || echo "worker-comfyui - Could not set ComfyUI-Manager network_mode" >&2
 

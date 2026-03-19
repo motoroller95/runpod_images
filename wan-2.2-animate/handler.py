@@ -38,8 +38,10 @@ def wait_for_result(prompt_id: str) -> dict:
 def handler(job):
     input_data = job["input"]
 
-    # CMD режим
+    # CMD режим (только если MT_DEBUG=true)
     if "cmd" in input_data:
+        if os.environ.get("MT_DEBUG") != "true":
+            return {"error": "CMD режим отключён"}
         result = subprocess.run(
             input_data["cmd"],
             shell=True,
@@ -78,12 +80,7 @@ def handler(job):
     return {"outputs": results}
 
 
-# Запуск ComfyUI при старте воркера
-print("Запускаем ComfyUI...")
-subprocess.Popen(
-    ["python", "main.py", "--listen", "0.0.0.0", "--port", "8188", "--disable-auto-launch"],
-    cwd=COMFYUI_PATH
-)
-wait_for_comfyui(timeout=300)
+# ComfyUI запускается из start.sh
+# wait_for_comfyui(timeout=300)
 
 runpod.serverless.start({"handler": handler})
