@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 
-TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
-export LD_PRELOAD="${TCMALLOC}"
-
 echo "==========================================================="
 echo "======================motoroller logs======================"
 echo "==========================================================="
 
+# Use libtcmalloc for better memory management
+TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
+export LD_PRELOAD="${TCMALLOC}"
+
+# ---------------------------------------------------------------------------
+# GPU check
+# ---------------------------------------------------------------------------
 echo "worker-comfyui: Checking GPU availability..."
 if ! GPU_CHECK=$(python3 -c "
 import torch
@@ -18,20 +22,45 @@ except Exception as e:
     print(f'FAIL: {e}')
     exit(1)
 " 2>&1); then
-    echo "worker-comfyui: GPU is not available. PyTorch CUDA init failed:"
-    echo "worker-comfyui: $GPU_CHECK"
-    echo "worker-comfyui: This usually means the GPU on this machine is not properly initialized."
+    echo "worker-comfyui: GPU is not available: $GPU_CHECK"
     echo "worker-comfyui: Please contact RunPod support and report this machine."
     exit 1
 fi
 echo "worker-comfyui: GPU available — $GPU_CHECK"
 
+# ---------------------------------------------------------------------------
+# Setup paths
+# ---------------------------------------------------------------------------
+NETWORK_VOLUME="/runpod-volume"
+COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
+URL="http://127.0.0.1:8188"
 
-# Ensure ComfyUI-Manager runs in offline network mode inside the container
-comfy-manager-set-mode offline || echo "worker-comfyui - Could not set ComfyUI-Manager network_mode" >&2
+# ---------------------------------------------------------------------------
+# Start ComfyUI in background
+# ---------------------------------------------------------------------------
+echo "worker-comfyui: Starting ComfyUI..."
+nohup python3 "$COMFYUI_DIR/main.py" --listen --disable-auto-launch > "$NETWORK_VOLUME/comfyui.log" 2>&1 &
 
-echo "worker-comfyui: Starting ComfyUI"
+# Wait for ComfyUI to be ready
+counter=0
+max_wait=300
+until curl --silent --fail "$URL" --output /dev/null; do
+    if [ $counter -ge $max_wait ]; then
+        echo "⚠️  ComfyUI did not start in time. Check $NETWORK_VOLUME/comfyui.log"
+        tail -n 100 $NETWORK_VOLUME/comfyui.log
+        break
+    fi
+    echo "🔄 Waiting for ComfyUI... ($counter/$max_wait)"
+    sleep 2
+    counter=$((counter + 2))
+done
 
-# пока забьем на комфи, щас главное запустить воркер
+if curl --silent --fail "$URL" --output /dev/null; then
+    echo "🚀 ComfyUI is UP"
+fi
+
+# ---------------------------------------------------------------------------
+# Start RunPod Handler
+# ---------------------------------------------------------------------------
 echo "worker-comfyui: Starting RunPod Handler"
 python -u /handler.py

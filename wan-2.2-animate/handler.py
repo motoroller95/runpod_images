@@ -6,7 +6,7 @@ import base64
 import os
 
 COMFYUI_URL = "http://127.0.0.1:8188"
-COMFYUI_PATH = "/ComfyUI"
+COMFYUI_PATH = "/runpod-volume/ComfyUI"
 
 def wait_for_comfyui(timeout=300):
     print("Ожидаем запуска ComfyUI...")
