@@ -1,9 +1,9 @@
 FROM hearmeman/comfyui-wan-template:v11
 
+RUN pip install runpod requests boto3
+
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}
-
-RUN pip install runpod requests boto3
 
 COPY handler.py /handler.py
 COPY comfy_api.py /comfy_api.py

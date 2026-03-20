@@ -80,7 +80,7 @@ class ComfyApiClient:
                 continue
 
             payload = response.json()
-            logger.info("ComfyUI /history response: %s", json.dumps(payload)[:2000])
+            logger.info("ComfyUI /history response: %s", json.dumps(payload))
             prompt_result = payload.get(prompt_id)
             if prompt_result:
                 status_str = prompt_result.get("status", {}).get("status_str")
