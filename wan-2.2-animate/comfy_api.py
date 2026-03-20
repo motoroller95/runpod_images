@@ -63,6 +63,7 @@ class ComfyApiClient:
         while time.time() < deadline:
             polls += 1
             try:
+                logger.info("Sending request...")
                 response = requests.get(f"{self.base_url}/history/{prompt_id}", timeout=60)
                 response.raise_for_status()
             except requests.exceptions.Timeout:
@@ -79,7 +80,7 @@ class ComfyApiClient:
                 continue
 
             payload = response.json()
-            logger.debug("ComfyUI /history response: %s", json.dumps(payload)[:2000])
+            logger.info("ComfyUI /history response: %s", json.dumps(payload)[:2000])
             prompt_result = payload.get(prompt_id)
             if prompt_result:
                 status_str = prompt_result.get("status", {}).get("status_str")
@@ -145,3 +146,4 @@ def extract_media_items(outputs: dict) -> list[dict]:
                 media_items.append(item)
     logger.info("Extracted media items from ComfyUI outputs: total=%d", len(media_items))
     return media_items
+
