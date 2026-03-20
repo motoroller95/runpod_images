@@ -21,12 +21,26 @@ logger = logging.getLogger("wan_animate.handler")
 
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
 WORKFLOW_PATH = os.getenv("WORKFLOW_PATH", "/workflow.json")
+COMFYUI_LOG_PATH = os.getenv("COMFYUI_LOG_PATH", "/ComfyUI/log.log")
 DOWNLOAD_WORKERS = int(os.getenv("DOWNLOAD_WORKERS", "4"))
 COMFY_RESULT_TIMEOUT_SECONDS = int(os.getenv("COMFY_RESULT_TIMEOUT_SECONDS", "7200"))
 
 LORA_EXTENSIONS = {".safetensors"}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
+
+
+def _dump_comfyui_log(tail_lines: int = 100) -> None:
+    log_path = Path(COMFYUI_LOG_PATH)
+    if not log_path.exists():
+        logger.error("ComfyUI log not found at %s", COMFYUI_LOG_PATH)
+        return
+    lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    tail = lines[-tail_lines:]
+    logger.error("=== ComfyUI log (last %d lines of %d) ===", len(tail), len(lines))
+    for line in tail:
+        logger.error("[comfyui] %s", line)
+    logger.error("=== end of ComfyUI log ===")
 
 
 def _pick_destination(destinations: list[str], allowed_extensions: set[str]) -> str:
@@ -117,7 +131,11 @@ def handler(job):
 
         logger.info("Stage 3/6: waiting for ComfyUI readiness (url=%s)", COMFYUI_URL)
         comfy = ComfyApiClient(base_url=COMFYUI_URL)
-        comfy.wait_for_ready()
+        try:
+            comfy.wait_for_ready()
+        except TimeoutError:
+            _dump_comfyui_log()
+            raise
         logger.info("Stage 3/6 complete: ComfyUI is ready")
 
         logger.info("Stage 4/6: queueing workflow prompt")
