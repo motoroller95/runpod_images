@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 
@@ -78,16 +79,21 @@ class ComfyApiClient:
                 continue
 
             payload = response.json()
+            logger.debug("ComfyUI /history response: %s", json.dumps(payload)[:2000])
             prompt_result = payload.get(prompt_id)
             if prompt_result:
-                status = prompt_result.get("status", {}).get("status_str")
-                if status == "error":
-                    msg = f"ComfyUI returned error for prompt {prompt_id}: {prompt_result.get('status')}"
+                status_str = prompt_result.get("status", {}).get("status_str")
+                logger.info("ComfyUI prompt status: prompt_id=%s status_str=%s", prompt_id, status_str)
+                if status_str == "success":
+                    outputs = prompt_result.get("outputs", {})
+                    logger.info("ComfyUI result ready: prompt_id=%s polls=%d output_nodes=%d", prompt_id, polls, len(outputs))
+                    return outputs, None
+                elif status_str in ("error", "cancelled"):
+                    msg = f"ComfyUI prompt {status_str}: {prompt_result.get('status')}"
                     logger.error(msg)
                     return None, msg
-                outputs = prompt_result.get("outputs", {})
-                logger.info("ComfyUI result ready: prompt_id=%s polls=%d output_nodes=%d", prompt_id, polls, len(outputs))
-                return outputs, None
+                else:
+                    logger.debug("ComfyUI prompt in history but status_str=%s, waiting: polls=%d", status_str, polls)
 
             now = time.time()
             if now - last_log_at >= 30:
@@ -133,6 +139,9 @@ def extract_media_items(outputs: dict) -> list[dict]:
     for node_output in outputs.values():
         for bucket in ("images", "videos", "gifs"):
             for item in node_output.get(bucket, []):
+                if item.get("type") == "temp":
+                    logger.debug("Skipping temp output: %s", item.get("filename"))
+                    continue
                 media_items.append(item)
     logger.info("Extracted media items from ComfyUI outputs: total=%d", len(media_items))
     return media_items
