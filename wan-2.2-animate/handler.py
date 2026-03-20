@@ -43,6 +43,14 @@ def _dump_comfyui_log(tail_lines: int = 100) -> None:
     logger.error("=== end of ComfyUI log ===")
 
 
+def _error(job_id, stage: str, message: str, started_at: float, dump_logs: bool = False) -> dict:
+    total_seconds = time.perf_counter() - started_at
+    logger.error("Job failed at %s: runpod_job_id=%s reason=%s duration=%.2fs", stage, job_id, message, total_seconds)
+    if dump_logs:
+        _dump_comfyui_log()
+    return {"error": f"{stage}: {message}"}
+
+
 def _pick_destination(destinations: list[str], allowed_extensions: set[str]) -> str:
     return next(
         destination
@@ -115,43 +123,50 @@ def handler(job):
     raw_job_id = job.get("id")
     logger.info("Job started: runpod_job_id=%s", raw_job_id)
 
+    # Stage 1: download inputs
     try:
         input_data = job["input"]
         downloads = input_data["downloads"]
         logger.info("Stage 1/6: downloading input files (count=%d workers=%d)", len(downloads), DOWNLOAD_WORKERS)
         downloaded_files = download_files(downloads, max_workers=DOWNLOAD_WORKERS)
-        logger.info(
-            "Stage 1/6 complete: downloaded files -> %s",
-            [item["destination"] for item in downloaded_files],
-        )
+    except Exception as e:
+        return _error(raw_job_id, "stage1/download", str(e), started_at)
+    logger.info("Stage 1/6 complete: downloaded files -> %s", [item["destination"] for item in downloaded_files])
 
+    # Stage 2: build workflow
+    try:
         logger.info("Stage 2/6: building workflow with runtime placeholders")
         workflow = _build_workflow(input_data, downloaded_files)
-        logger.info("Stage 2/6 complete")
+    except Exception as e:
+        return _error(raw_job_id, "stage2/build_workflow", str(e), started_at)
+    logger.info("Stage 2/6 complete")
 
-        logger.info("Stage 3/6: waiting for ComfyUI readiness (url=%s)", COMFYUI_URL)
-        comfy = ComfyApiClient(base_url=COMFYUI_URL)
-        try:
-            comfy.wait_for_ready()
-        except TimeoutError:
-            _dump_comfyui_log()
-            raise
-        logger.info("Stage 3/6 complete: ComfyUI is ready")
+    comfy = ComfyApiClient(base_url=COMFYUI_URL)
 
-        logger.info("Stage 4/6: queueing workflow prompt")
-        try:
-            prompt_id = comfy.queue_prompt(workflow)
-        except Exception:
-            _dump_comfyui_log(tail_lines=100)
-            raise
-        logger.info("Stage 4/6 complete: prompt_id=%s", prompt_id)
+    # Stage 3: wait for ComfyUI ready
+    logger.info("Stage 3/6: waiting for ComfyUI readiness (url=%s)", COMFYUI_URL)
+    if err := comfy.wait_for_ready():
+        return _error(raw_job_id, "stage3/comfyui_ready", err, started_at, dump_logs=True)
+    logger.info("Stage 3/6 complete: ComfyUI is ready")
 
-        logger.info("Stage 5/6: waiting for ComfyUI outputs (timeout=%ss)", COMFY_RESULT_TIMEOUT_SECONDS)
-        outputs = comfy.wait_for_result(prompt_id, timeout_seconds=COMFY_RESULT_TIMEOUT_SECONDS)
-        media_items = extract_media_items(outputs)
-        logger.info("Stage 5/6 complete: media_items=%d", len(media_items))
+    # Stage 4: queue prompt
+    logger.info("Stage 4/6: queueing workflow prompt")
+    prompt_id, err = comfy.queue_prompt(workflow)
+    if err:
+        return _error(raw_job_id, "stage4/queue_prompt", err, started_at, dump_logs=True)
+    logger.info("Stage 4/6 complete: prompt_id=%s", prompt_id)
 
-        logger.info("Stage 6/6: uploading outputs to S3")
+    # Stage 5: wait for result
+    logger.info("Stage 5/6: waiting for ComfyUI outputs (timeout=%ss)", COMFY_RESULT_TIMEOUT_SECONDS)
+    outputs, err = comfy.wait_for_result(prompt_id, timeout_seconds=COMFY_RESULT_TIMEOUT_SECONDS)
+    if err:
+        return _error(raw_job_id, "stage5/wait_result", err, started_at, dump_logs=True)
+    media_items = extract_media_items(outputs)
+    logger.info("Stage 5/6 complete: media_items=%d", len(media_items))
+
+    # Stage 6: upload to S3
+    logger.info("Stage 6/6: uploading outputs to S3")
+    try:
         s3 = S3Client()
         job_id = str(raw_job_id or prompt_id)
         seen_names: dict[str, int] = {}
@@ -167,7 +182,9 @@ def handler(job):
                 item.get("subfolder", ""),
                 item.get("type", "output"),
             )
-            media_bytes = comfy.fetch_output_binary(item)
+            media_bytes, err = comfy.fetch_output_binary(item)
+            if err:
+                return _error(raw_job_id, f"stage6/fetch_output/{filename}", err, started_at)
             content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
             object_key, final_name = _build_output_key(job_id, filename, seen_names)
             url = s3.upload_and_presign(media_bytes, object_key, content_type=content_type)
@@ -180,24 +197,18 @@ def handler(job):
                 final_name,
                 len(media_bytes),
             )
+    except Exception as e:
+        return _error(raw_job_id, "stage6/upload", str(e), started_at)
 
-        total_seconds = time.perf_counter() - started_at
-        logger.info(
-            "Job completed successfully: runpod_job_id=%s prompt_id=%s outputs=%d duration=%.2fs",
-            raw_job_id,
-            prompt_id,
-            len(uploaded_outputs),
-            total_seconds,
-        )
-        return {"outputs": uploaded_outputs}
-    except Exception:
-        total_seconds = time.perf_counter() - started_at
-        logger.exception(
-            "Job failed: runpod_job_id=%s duration=%.2fs",
-            raw_job_id,
-            total_seconds,
-        )
-        raise
+    total_seconds = time.perf_counter() - started_at
+    logger.info(
+        "Job completed successfully: runpod_job_id=%s prompt_id=%s outputs=%d duration=%.2fs",
+        raw_job_id,
+        prompt_id,
+        len(uploaded_outputs),
+        total_seconds,
+    )
+    return {"outputs": uploaded_outputs}
 
 
 runpod.serverless.start({"handler": handler})
