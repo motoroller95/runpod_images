@@ -31,7 +31,7 @@
   },
   "227": {
     "inputs": {
-      "text": "input_values_positive_prompt",
+      "text": "{{input_values_positive_prompt}}",
       "clip": [
         "224",
         0
@@ -44,7 +44,7 @@
   },
   "228": {
     "inputs": {
-      "text": "input_values_negative_prompt",
+      "text": "{{input_values_negative_prompt}}",
       "clip": [
         "224",
         0

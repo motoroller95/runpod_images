@@ -34,6 +34,12 @@ class ComfyApiClient:
             json={"prompt": workflow},
             timeout=30,
         )
+        if not response.ok:
+            logger.error(
+                "ComfyUI /prompt rejected (status=%d): %s",
+                response.status_code,
+                response.text[:4000],
+            )
         response.raise_for_status()
         prompt_id = response.json()["prompt_id"]
         logger.info("Prompt queued: prompt_id=%s", prompt_id)

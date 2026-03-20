@@ -139,7 +139,11 @@ def handler(job):
         logger.info("Stage 3/6 complete: ComfyUI is ready")
 
         logger.info("Stage 4/6: queueing workflow prompt")
-        prompt_id = comfy.queue_prompt(workflow)
+        try:
+            prompt_id = comfy.queue_prompt(workflow)
+        except Exception:
+            _dump_comfyui_log(tail_lines=100)
+            raise
         logger.info("Stage 4/6 complete: prompt_id=%s", prompt_id)
 
         logger.info("Stage 5/6: waiting for ComfyUI outputs (timeout=%ss)", COMFY_RESULT_TIMEOUT_SECONDS)
