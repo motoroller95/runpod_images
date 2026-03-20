@@ -18,7 +18,10 @@ fi
 # GPU check
 # ---------------------------------------------------------------------------
 echo "worker-comfyui: Checking GPU availability..."
-GPU_CHECK=$(python3 -c "
+GPU_CHECK=""
+GPU_OK=0
+for attempt in 1 2 3; do
+    GPU_CHECK=$(python3 -c "
 import torch
 try:
     torch.cuda.init()
@@ -27,8 +30,22 @@ try:
 except Exception as e:
     print(f'FAIL: {e}')
     exit(1)
-" 2>&1) || { echo "worker-comfyui: GPU not available: $GPU_CHECK"; exit 1; }
-echo "worker-comfyui: GPU available — $GPU_CHECK"
+" 2>&1) && GPU_OK=1 && break
+    echo "worker-comfyui: GPU check attempt $attempt/3 failed: $GPU_CHECK"
+    [ "$attempt" -lt 3 ] && sleep 5
+done
+
+if [ "$GPU_OK" -eq 0 ]; then
+    echo "worker-comfyui: torch check failed 3 times, trying nvidia-smi fallback..."
+    if nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | grep -q .; then
+        echo "worker-comfyui: GPU available via nvidia-smi — $(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)"
+    else
+        echo "worker-comfyui: GPU not available after all checks, aborting"
+        exit 1
+    fi
+else
+    echo "worker-comfyui: GPU available — $GPU_CHECK"
+fi
 
 # ---------------------------------------------------------------------------
 # Symlink models and custom_nodes from network volume into /ComfyUI
@@ -37,7 +54,7 @@ echo "worker-comfyui: GPU available — $GPU_CHECK"
 NETWORK_VOLUME="/runpod-volume/hearmemann/wan-animate"
 COMFYUI_DIR="/ComfyUI"
 
-echo "worker-comfyui: Copying models and custom_nodes from network volume..."
+echo "worker-comfyui: Linking contents of models and custom_nodes from network volume..."
 
 for dir in models custom_nodes; do
     src="$NETWORK_VOLUME/$dir"
@@ -46,9 +63,13 @@ for dir in models custom_nodes; do
         echo "worker-comfyui: WARNING — $src not found on network volume, skipping"
         continue
     fi
-    rm -rf "$dst"
-    cp -r "$src" "$dst"
-    echo "worker-comfyui: Copied $src -> $dst"
+    mkdir -p "$dst"
+    for item in "$src"/*; do
+        [ -e "$item" ] || continue
+        name="$(basename "$item")"
+        ln -sfn "$item" "$dst/$name"
+        echo "worker-comfyui: Linked $item -> $dst/$name"
+    done
 done
 
 # Ensure input/output are clean empty local dirs
