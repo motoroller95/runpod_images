@@ -211,6 +211,7 @@ def handler(job):
         len(uploaded_outputs),
         total_seconds,
     )
+    time.sleep(600)
     return {"outputs": uploaded_outputs}
 
 
