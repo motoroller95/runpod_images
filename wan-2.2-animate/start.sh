@@ -34,10 +34,10 @@ echo "worker-comfyui: GPU available — $GPU_CHECK"
 # Symlink models and custom_nodes from network volume into /ComfyUI
 # Leave input/ and output/ as clean local directories
 # ---------------------------------------------------------------------------
-NETWORK_VOLUME="/runpod-volume"
+NETWORK_VOLUME="/runpod-volume/hearmemann/wan-animate"
 COMFYUI_DIR="/ComfyUI"
 
-echo "worker-comfyui: Linking models and custom_nodes from network volume..."
+echo "worker-comfyui: Copying models and custom_nodes from network volume..."
 
 for dir in models custom_nodes; do
     src="$NETWORK_VOLUME/$dir"
@@ -47,8 +47,8 @@ for dir in models custom_nodes; do
         continue
     fi
     rm -rf "$dst"
-    ln -s "$src" "$dst"
-    echo "worker-comfyui: Linked $src -> $dst"
+    cp -r "$src" "$dst"
+    echo "worker-comfyui: Copied $src -> $dst"
 done
 
 # Ensure input/output are clean empty local dirs
