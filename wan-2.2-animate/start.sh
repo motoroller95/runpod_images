@@ -67,6 +67,7 @@ for dir in models custom_nodes; do
     for item in "$src"/*; do
         [ -e "$item" ] || continue
         name="$(basename "$item")"
+        rm -rf "$dst/$name"
         ln -sfn "$item" "$dst/$name"
         echo "worker-comfyui: Linked $item -> $dst/$name"
     done
