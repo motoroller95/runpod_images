@@ -19,6 +19,9 @@ if not logging.getLogger().handlers:
 
 logger = logging.getLogger("wan_animate.handler")
 
+GIT_COMMIT = os.getenv("GIT_COMMIT", "unknown")
+logger.info("=== wan-animate handler starting: commit=%s ===", GIT_COMMIT)
+
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
 WORKFLOW_PATH = os.getenv("WORKFLOW_PATH", "/workflow.json")
 COMFYUI_LOG_PATH = os.getenv("COMFYUI_LOG_PATH", "/ComfyUI/log.log")
