@@ -218,7 +218,6 @@ def handler(job):
         len(uploaded_outputs),
         total_seconds,
     )
-    time.sleep(3600)
     return {"outputs": uploaded_outputs}
 
 runpod.serverless.start({"handler": handler})
