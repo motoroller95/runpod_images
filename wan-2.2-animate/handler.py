@@ -102,6 +102,13 @@ def _build_workflow(input_data: dict, downloaded_files: list[dict]) -> dict:
     for placeholder, value in replacements.items():
         workflow_text = workflow_text.replace(placeholder, value)
     workflow = json.loads(workflow_text)
+    video_width  = input_data.get("video_width",  720)
+    video_height = input_data.get("video_height", 1280)
+    if "330" in workflow:
+        workflow["330"]["inputs"]["value"] = video_width
+    if "331" in workflow:
+        workflow["331"]["inputs"]["value"] = video_height
+    logger.info("Applied video dimensions: width=%s height=%s", video_width, video_height)
     logger.info("Workflow prepared and parsed successfully")
     return workflow
 
@@ -211,8 +218,7 @@ def handler(job):
         len(uploaded_outputs),
         total_seconds,
     )
-    time.sleep(600)
+    time.sleep(3600)
     return {"outputs": uploaded_outputs}
-
 
 runpod.serverless.start({"handler": handler})

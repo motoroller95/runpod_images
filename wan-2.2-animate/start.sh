@@ -51,10 +51,27 @@ fi
 # Symlink models and custom_nodes from network volume into /ComfyUI
 # Leave input/ and output/ as clean local directories
 # ---------------------------------------------------------------------------
-NETWORK_VOLUME="/runpod-volume/hearmemann/wan-animate"
+NETWORK_VOLUME="/runpod-volume/hearmemann/wan_animate"
 COMFYUI_DIR="/ComfyUI"
 
 echo "worker-comfyui: Linking contents of models and custom_nodes from network volume..."
+
+link_files_recursively() {
+    local src="$1"
+    local dst="$2"
+    mkdir -p "$dst"
+    for item in "$src"/*; do
+        [ -e "$item" ] || continue
+        name="$(basename "$item")"
+        if [ -d "$item" ]; then
+            link_files_recursively "$item" "$dst/$name"
+        else
+            rm -f "$dst/$name"
+            ln -sfn "$item" "$dst/$name"
+            echo "worker-comfyui: Linked $item -> $dst/$name"
+        fi
+    done
+}
 
 for dir in models custom_nodes; do
     src="$NETWORK_VOLUME/$dir"
@@ -63,14 +80,9 @@ for dir in models custom_nodes; do
         echo "worker-comfyui: WARNING — $src not found on network volume, skipping"
         continue
     fi
+    rm -rf "$dst"
     mkdir -p "$dst"
-    for item in "$src"/*; do
-        [ -e "$item" ] || continue
-        name="$(basename "$item")"
-        rm -rf "$dst/$name"
-        ln -sfn "$item" "$dst/$name"
-        echo "worker-comfyui: Linked $item -> $dst/$name"
-    done
+    link_files_recursively "$src" "$dst"
 done
 
 # Ensure input/output are clean empty local dirs

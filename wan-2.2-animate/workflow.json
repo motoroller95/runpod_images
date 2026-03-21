@@ -547,7 +547,7 @@
     "inputs": {
       "frame_rate": 16,
       "loop_count": 0,
-      "filename_prefix": "AnimateDiff",
+      "filename_prefix": "FirstOutput",
       "format": "video/h264-mp4",
       "pix_fmt": "yuv420p",
       "crf": 19,
@@ -587,7 +587,7 @@
     "inputs": {
       "frame_rate": 16,
       "loop_count": 0,
-      "filename_prefix": "AnimateDiff",
+      "filename_prefix": "ThirdOutput",
       "format": "video/h264-mp4",
       "pix_fmt": "yuv420p",
       "crf": 19,
@@ -852,7 +852,7 @@
     "inputs": {
       "frame_rate": 16,
       "loop_count": 0,
-      "filename_prefix": "AnimateDiff",
+      "filename_prefix": "SecondOutput",
       "format": "video/h264-mp4",
       "pix_fmt": "yuv420p",
       "crf": 19,
@@ -878,7 +878,7 @@
     "inputs": {
       "frame_rate": 32,
       "loop_count": 0,
-      "filename_prefix": "AnimateDiff",
+      "filename_prefix": "FinalOutput",
       "format": "video/h264-mp4",
       "pix_fmt": "yuv420p",
       "crf": 19,

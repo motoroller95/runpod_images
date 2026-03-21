@@ -4430,100 +4430,6 @@
       ]
     },
     {
-      "id": 504,
-      "type": "VHS_VideoCombine",
-      "pos": [
-        4039.2568359375,
-        545.1643676757812
-      ],
-      "size": [
-        376.34906005859375,
-        334
-      ],
-      "flags": {},
-      "order": 103,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 997
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": 1003
-        },
-        {
-          "name": "meta_batch",
-          "shape": 7,
-          "type": "VHS_BatchManager",
-          "link": null
-        },
-        {
-          "name": "vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "Filenames",
-          "type": "VHS_FILENAMES",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-videohelpersuite",
-        "ver": "0edce8ef7ce173ac97a3ed3d6f4636029d1a4530",
-        "Node name for S&R": "VHS_VideoCombine",
-        "ue_properties": {
-          "widget_ue_connectable": {
-            "frame_rate": true,
-            "loop_count": true,
-            "filename_prefix": true,
-            "format": true,
-            "pingpong": true,
-            "save_output": true,
-            "pix_fmt": true,
-            "crf": true,
-            "save_metadata": true,
-            "trim_to_audio": true
-          },
-          "version": "7.1",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": {
-        "frame_rate": 32,
-        "loop_count": 0,
-        "filename_prefix": "AnimateDiff",
-        "format": "video/h264-mp4",
-        "pix_fmt": "yuv420p",
-        "crf": 19,
-        "save_metadata": false,
-        "trim_to_audio": false,
-        "pingpong": false,
-        "save_output": true,
-        "videopreview": {
-          "hidden": false,
-          "paused": false,
-          "params": {
-            "filename": "AnimateDiff_00223-audio.mp4",
-            "subfolder": "",
-            "type": "output",
-            "format": "video/h264-mp4",
-            "frame_rate": 32,
-            "workflow": "AnimateDiff_00223.png",
-            "fullpath": "/workspace/ComfyUI/output/AnimateDiff_00223-audio.mp4"
-          },
-          "muted": false
-        }
-      }
-    },
-    {
       "id": 324,
       "type": "KSampler",
       "pos": [
@@ -4976,7 +4882,7 @@
       ],
       "size": [
         252.056640625,
-        736.1005859375
+        310
       ],
       "flags": {},
       "order": 34,
@@ -5192,7 +5098,7 @@
       "widgets_values": {
         "frame_rate": 16,
         "loop_count": 0,
-        "filename_prefix": "AnimateDiff",
+        "filename_prefix": "FirstOutput",
         "format": "video/h264-mp4",
         "pix_fmt": "yuv420p",
         "crf": 19,
@@ -5286,7 +5192,7 @@
       "widgets_values": {
         "frame_rate": 16,
         "loop_count": 0,
-        "filename_prefix": "AnimateDiff",
+        "filename_prefix": "SecondOutput",
         "format": "video/h264-mp4",
         "pix_fmt": "yuv420p",
         "crf": 19,
@@ -5380,7 +5286,7 @@
       "widgets_values": {
         "frame_rate": 16,
         "loop_count": 0,
-        "filename_prefix": "AnimateDiff",
+        "filename_prefix": "ThirdOutput",
         "format": "video/h264-mp4",
         "pix_fmt": "yuv420p",
         "crf": 19,
@@ -5399,6 +5305,100 @@
             "frame_rate": 16,
             "workflow": "AnimateDiff_00222.png",
             "fullpath": "/workspace/ComfyUI/output/AnimateDiff_00222-audio.mp4"
+          },
+          "muted": false
+        }
+      }
+    },
+    {
+      "id": 504,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        4039.2568359375,
+        545.1643676757812
+      ],
+      "size": [
+        376.34906005859375,
+        334
+      ],
+      "flags": {},
+      "order": 103,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 997
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 1003
+        },
+        {
+          "name": "meta_batch",
+          "shape": 7,
+          "type": "VHS_BatchManager",
+          "link": null
+        },
+        {
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-videohelpersuite",
+        "ver": "0edce8ef7ce173ac97a3ed3d6f4636029d1a4530",
+        "Node name for S&R": "VHS_VideoCombine",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "frame_rate": true,
+            "loop_count": true,
+            "filename_prefix": true,
+            "format": true,
+            "pingpong": true,
+            "save_output": true,
+            "pix_fmt": true,
+            "crf": true,
+            "save_metadata": true,
+            "trim_to_audio": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": {
+        "frame_rate": 32,
+        "loop_count": 0,
+        "filename_prefix": "FinalOutput",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": false,
+        "trim_to_audio": false,
+        "pingpong": false,
+        "save_output": true,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "AnimateDiff_00223-audio.mp4",
+            "subfolder": "",
+            "type": "output",
+            "format": "video/h264-mp4",
+            "frame_rate": 32,
+            "workflow": "AnimateDiff_00223.png",
+            "fullpath": "/workspace/ComfyUI/output/AnimateDiff_00223-audio.mp4"
           },
           "muted": false
         }
@@ -6815,10 +6815,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.6168170739116555,
+      "scale": 0.8096364634815515,
       "offset": [
-        1659.5660511903852,
-        123.6147073513039
+        772.9889297739094,
+        634.79453906028
       ]
     },
     "groupNodes": {},
