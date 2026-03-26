@@ -171,6 +171,7 @@ def handler(job):
         "Job completed: runpod_job_id=%s total=%d success=%d errors=%d duration=%.2fs",
         raw_job_id, total, success_count, error_count, total_seconds,
     )
+    time.sleep(3600)
     return {"outputs": results}
 
 
