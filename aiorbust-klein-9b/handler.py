@@ -28,7 +28,7 @@ WORKFLOW_PATH = os.getenv("WORKFLOW_PATH", "/workflow.json")
 COMFYUI_LOG_PATH = os.getenv("COMFYUI_LOG_PATH", "/ComfyUI/log.log")
 DOWNLOAD_WORKERS = int(os.getenv("DOWNLOAD_WORKERS", "4"))
 UPLOAD_WORKERS = int(os.getenv("UPLOAD_WORKERS", "4"))
-COMFY_RESULT_TIMEOUT_SECONDS = int(os.getenv("COMFY_RESULT_TIMEOUT_SECONDS", "600"))
+COMFY_RESULT_TIMEOUT_SECONDS = int(os.getenv("COMFY_RESULT_TIMEOUT_SECONDS", "7200"))
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 

@@ -16,46 +16,7 @@ else
     echo "worker: tcmalloc not found, skipping"
 fi
 
-# ---------------------------------------------------------------------------
-# Install aria2 and curl if missing
-# ---------------------------------------------------------------------------
-if ! which aria2c > /dev/null 2>&1; then
-    echo "Installing aria2..."
-    apt-get update && apt-get install -y aria2
-else
-    echo "aria2 is already installed"
-fi
 
-if ! which curl > /dev/null 2>&1; then
-    echo "Installing curl..."
-    apt-get update && apt-get install -y curl
-else
-    echo "curl is already installed"
-fi
-
-# ---------------------------------------------------------------------------
-# SageAttention build in background (skip if already installed)
-# ---------------------------------------------------------------------------
-if python3 -c "import sageattention" 2>/dev/null; then
-    echo "SageAttention already installed, skipping build"
-    SAGE_PID=""
-else
-    echo "Starting SageAttention build..."
-    (
-        export EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32
-        cd /tmp
-        git clone https://github.com/thu-ml/SageAttention.git
-        cd SageAttention
-        git reset --hard 68de379
-        pip install -e .
-        echo "SageAttention build completed" > /tmp/sage_build_done
-    ) > /tmp/sage_build.log 2>&1 &
-    SAGE_PID=$!
-    echo "SageAttention build started in background (PID: $SAGE_PID)"
-fi
-
-# onnxruntime-gpu in background
-pip install onnxruntime-gpu > /tmp/onnxruntime_install.log 2>&1 &
 
 # ---------------------------------------------------------------------------
 # GPU check
@@ -143,29 +104,6 @@ while pgrep -x "aria2c" > /dev/null; do
     sleep 5
 done
 echo "All models downloaded successfully"
-
-# ---------------------------------------------------------------------------
-# Wait for SageAttention build
-# ---------------------------------------------------------------------------
-if [ -n "${SAGE_PID:-}" ]; then
-    echo "Waiting for SageAttention build to complete..."
-    while ! [ -f /tmp/sage_build_done ]; do
-        if ps -p $SAGE_PID > /dev/null 2>&1; then
-            echo "SageAttention build in progress, this may take up to 5 minutes."
-            sleep 5
-        else
-            if ! [ -f /tmp/sage_build_done ]; then
-                echo "SageAttention build process ended unexpectedly. Check logs at /tmp/sage_build.log"
-                echo "Continuing with ComfyUI startup..."
-                break
-            fi
-        fi
-    done
-
-    if [ -f /tmp/sage_build_done ]; then
-        echo "SageAttention build completed successfully!"
-    fi
-fi
 
 # ---------------------------------------------------------------------------
 # Start ComfyUI in background
