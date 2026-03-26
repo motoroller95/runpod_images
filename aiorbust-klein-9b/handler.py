@@ -3,6 +3,7 @@ import logging
 import mimetypes
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import runpod
@@ -26,6 +27,7 @@ COMFYUI_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
 WORKFLOW_PATH = os.getenv("WORKFLOW_PATH", "/workflow.json")
 COMFYUI_LOG_PATH = os.getenv("COMFYUI_LOG_PATH", "/ComfyUI/log.log")
 DOWNLOAD_WORKERS = int(os.getenv("DOWNLOAD_WORKERS", "4"))
+UPLOAD_WORKERS = int(os.getenv("UPLOAD_WORKERS", "4"))
 COMFY_RESULT_TIMEOUT_SECONDS = int(os.getenv("COMFY_RESULT_TIMEOUT_SECONDS", "600"))
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
@@ -60,17 +62,16 @@ def _load_workflow_template() -> str:
     return workflow_text
 
 
-def _build_workflow(prompt: str, face_filename: str, body_filename: str) -> dict:
+def _build_workflow(prompt: str, face_filename: str) -> dict:
     logger.info(
-        "Building workflow: prompt_len=%d face=%s body=%s",
-        len(prompt), face_filename, body_filename,
+        "Building workflow: prompt_len=%d face=%s",
+        len(prompt), face_filename,
     )
     workflow_text = _load_workflow_template()
 
     replacements = {
         "{{input_prompt}}": prompt,
         "{{input_values_target_face}}": face_filename,
-        "{{input_values_target_body}}": body_filename,
     }
     for placeholder, value in replacements.items():
         workflow_text = workflow_text.replace(placeholder, value)
@@ -108,70 +109,70 @@ def handler(job):
         return _error(raw_job_id, "stage2/comfyui_ready", err, started_at, dump_logs=True)
     logger.info("Stage 2 complete: ComfyUI is ready")
 
-    # Stage 3: process each target image
-    s3 = S3Client()
+    # Stage 3: run workflow once
     face_filename = Path(reference_face["destination"]).name
-    total = len(target_images)
-    results = []
+    try:
+        workflow = _build_workflow(prompt, face_filename)
 
-    for index, target in enumerate(target_images):
-        target_filename = Path(target["destination"]).name
-        logger.info("Processing target image %d/%d: %s", index + 1, total, target_filename)
+        logger.info("Stage 3: queueing workflow")
+        prompt_id, err = comfy.queue_prompt(workflow)
+        if err:
+            return _error(raw_job_id, "stage3/queue_prompt", err, started_at, dump_logs=True)
 
+        logger.info("Stage 3: waiting for result (prompt_id=%s)", prompt_id)
+        outputs, err = comfy.wait_for_result(prompt_id, timeout_seconds=COMFY_RESULT_TIMEOUT_SECONDS)
+        if err:
+            return _error(raw_job_id, "stage3/wait_for_result", err, started_at, dump_logs=True)
+
+        media_items = extract_media_items(outputs)
+        logger.info("Stage 3 complete: got %d media items", len(media_items))
+    except Exception as e:
+        return _error(raw_job_id, "stage3/workflow", str(e), started_at, dump_logs=True)
+
+    # Stage 4: parallel S3 upload
+    s3 = S3Client()
+
+    def _fetch_and_upload(index: int, item: dict) -> dict:
         try:
-            # Build workflow
-            body_filename = target_filename
-            workflow = _build_workflow(prompt, face_filename, body_filename)
-
-            # Queue prompt
-            prompt_id, err = comfy.queue_prompt(workflow)
+            media_bytes, err = comfy.fetch_output_binary(item)
             if err:
-                raise RuntimeError(f"queue_prompt failed: {err}")
+                raise RuntimeError(f"fetch_output_binary failed: {err}")
 
-            # Wait for result
-            outputs, err = comfy.wait_for_result(prompt_id, timeout_seconds=COMFY_RESULT_TIMEOUT_SECONDS)
-            if err:
-                raise RuntimeError(f"wait_for_result failed: {err}")
+            content_type = mimetypes.guess_type(item["filename"])[0] or "application/octet-stream"
+            extension = Path(item["filename"]).suffix
+            object_key = f"run/{job_id}/{index}{extension}"
 
-            media_items = extract_media_items(outputs)
-            logger.info("Target %d/%d: got %d media items", index + 1, total, len(media_items))
-
-            # Upload each output
-            for item in media_items:
-                media_bytes, err = comfy.fetch_output_binary(item)
-                if err:
-                    raise RuntimeError(f"fetch_output_binary failed: {err}")
-
-                content_type = mimetypes.guess_type(item["filename"])[0] or "application/octet-stream"
-                stem = Path(target_filename).stem
-                extension = Path(item["filename"]).suffix
-                object_key = f"run/{job_id}/{index}_{stem}{extension}"
-
-                url = s3.upload_and_presign(media_bytes, object_key, content_type=content_type)
-                results.append({
-                    "index": index,
-                    "target_filename": target_filename,
-                    "filename": f"{index}_{stem}{extension}",
-                    "url": url,
-                })
-                logger.info("Uploaded: s3_key=%s bytes=%d", object_key, len(media_bytes))
-
-        except Exception as e:
-            logger.exception("Failed processing target %d/%d (%s)", index + 1, total, target_filename)
-            results.append({
+            url = s3.upload_and_presign(media_bytes, object_key, content_type=content_type)
+            logger.info("Uploaded: s3_key=%s bytes=%d", object_key, len(media_bytes))
+            return {
                 "index": index,
-                "target_filename": target_filename,
+                "filename": f"{index}{extension}",
+                "url": url,
+            }
+        except Exception as e:
+            logger.exception("Failed uploading item %d (%s)", index, item.get("filename"))
+            return {
+                "index": index,
+                "filename": item.get("filename", "unknown"),
                 "error": str(e),
-            })
+            }
+
+    logger.info("Stage 4: uploading %d items to S3 (workers=%d)", len(media_items), UPLOAD_WORKERS)
+    with ThreadPoolExecutor(max_workers=UPLOAD_WORKERS) as executor:
+        futures = [
+            executor.submit(_fetch_and_upload, i, item)
+            for i, item in enumerate(media_items)
+        ]
+        results = [f.result() for f in futures]
 
     total_seconds = time.perf_counter() - started_at
     success_count = sum(1 for r in results if "url" in r)
     error_count = sum(1 for r in results if "error" in r)
     logger.info(
         "Job completed: runpod_job_id=%s total=%d success=%d errors=%d duration=%.2fs",
-        raw_job_id, total, success_count, error_count, total_seconds,
+        raw_job_id, len(media_items), success_count, error_count, total_seconds,
     )
-    return {"outputs": results}
+    return {"outputs": results, "total_seconds": total_seconds}
 
 
 runpod.serverless.start({"handler": handler})

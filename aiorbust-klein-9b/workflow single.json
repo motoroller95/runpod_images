@@ -5,7 +5,7 @@
     },
     "class_type": "KSamplerSelect",
     "_meta": {
-      "title": "KSamplerSelect"
+      "title": "Выбор KSampler"
     }
   },
   "152": {
@@ -43,7 +43,7 @@
     },
     "class_type": "CFGGuider",
     "_meta": {
-      "title": "CFGGuider"
+      "title": "CFG Гид"
     }
   },
   "154": {
@@ -71,7 +71,7 @@
     },
     "class_type": "SamplerCustomAdvanced",
     "_meta": {
-      "title": "SamplerCustomAdvanced"
+      "title": "Пользовательский сэмплер (Расширенный)"
     }
   },
   "155": {
@@ -87,7 +87,7 @@
     },
     "class_type": "VAEDecode",
     "_meta": {
-      "title": "VAE Decode"
+      "title": "Декодировать VAE"
     }
   },
   "156": {
@@ -104,7 +104,7 @@
     },
     "class_type": "EmptyFlux2LatentImage",
     "_meta": {
-      "title": "Empty Flux 2 Latent"
+      "title": "Пустой Flux 2 latent"
     }
   },
   "157": {
@@ -116,16 +116,16 @@
     },
     "class_type": "GetImageSize",
     "_meta": {
-      "title": "Get Image Size"
+      "title": "Получить размер изображения"
     }
   },
   "158": {
     "inputs": {
-      "noise_seed": 913059162837787
+      "noise_seed": 934694103039535
     },
     "class_type": "RandomNoise",
     "_meta": {
-      "title": "RandomNoise"
+      "title": "Случайный шум"
     }
   },
   "159": {
@@ -141,7 +141,7 @@
     },
     "class_type": "ReferenceLatent",
     "_meta": {
-      "title": "ReferenceLatent"
+      "title": "Эталонный латент"
     }
   },
   "160": {
@@ -157,7 +157,7 @@
     },
     "class_type": "ReferenceLatent",
     "_meta": {
-      "title": "ReferenceLatent"
+      "title": "Эталонный латент"
     }
   },
   "162": {
@@ -173,7 +173,7 @@
     },
     "class_type": "VAEEncode",
     "_meta": {
-      "title": "VAE Encode"
+      "title": "Кодировать VAE"
     }
   },
   "164": {
@@ -189,7 +189,7 @@
     },
     "class_type": "VAEEncode",
     "_meta": {
-      "title": "VAE Encode"
+      "title": "Кодировать VAE"
     }
   },
   "165": {
@@ -205,7 +205,7 @@
     },
     "class_type": "ReferenceLatent",
     "_meta": {
-      "title": "ReferenceLatent"
+      "title": "Эталонный латент"
     }
   },
   "166": {
@@ -221,7 +221,7 @@
     },
     "class_type": "ReferenceLatent",
     "_meta": {
-      "title": "ReferenceLatent"
+      "title": "Эталонный латент"
     }
   },
   "167": {
@@ -233,7 +233,7 @@
     },
     "class_type": "ConditioningZeroOut",
     "_meta": {
-      "title": "ConditioningZeroOut"
+      "title": "Обнуление кондиционирования"
     }
   },
   "168": {
@@ -257,7 +257,7 @@
     },
     "class_type": "CLIPLoader",
     "_meta": {
-      "title": "Load CLIP"
+      "title": "Загрузить CLIP"
     }
   },
   "174": {
@@ -266,7 +266,7 @@
     },
     "class_type": "VAELoader",
     "_meta": {
-      "title": "Load VAE"
+      "title": "Загрузить VAE"
     }
   },
   "175": {
@@ -276,7 +276,7 @@
     },
     "class_type": "UNETLoader",
     "_meta": {
-      "title": "Load Diffusion Model"
+      "title": "Загрузить модель диффузии"
     }
   },
   "269": {
@@ -297,7 +297,7 @@
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "Load Image"
+      "title": "Загрузить изображение"
     }
   },
   "271": {
@@ -312,7 +312,16 @@
     },
     "class_type": "ImageScaleToTotalPixels",
     "_meta": {
-      "title": "ImageScaleToTotalPixels"
+      "title": "Масштабировать изображение до общего количества пикселей"
+    }
+  },
+  "278": {
+    "inputs": {
+      "image": "{{input_values_target_body}}"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Загрузить изображение"
     }
   },
   "291": {
@@ -321,13 +330,13 @@
       "megapixels": 2,
       "resolution_steps": 1,
       "image": [
-        "313",
+        "278",
         0
       ]
     },
     "class_type": "ImageScaleToTotalPixels",
     "_meta": {
-      "title": "ImageScaleToTotalPixels"
+      "title": "Масштабировать изображение до общего количества пикселей"
     }
   },
   "295": {
@@ -340,16 +349,7 @@
     },
     "class_type": "SaveImage",
     "_meta": {
-      "title": "Save Image"
-    }
-  },
-  "313": {
-    "inputs": {
-      "folder": "batch_folder"
-    },
-    "class_type": "LoadImageDataSetFromFolder",
-    "_meta": {
-      "title": "Load Image Dataset from Folder"
+      "title": "Сохранить изображение"
     }
   }
 }
