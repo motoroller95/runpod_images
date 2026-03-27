@@ -4,7 +4,7 @@ import time
 
 import requests
 
-logger = logging.getLogger("klein_9b.comfy_api")
+logger = logging.getLogger(__name__)
 
 
 class ComfyApiClient:
@@ -29,6 +29,22 @@ class ComfyApiClient:
         msg = f"ComfyUI did not become ready within {timeout_seconds}s after {attempts} attempts"
         logger.error(msg)
         return msg
+
+    def clear_history(self) -> str | None:
+        """Clear ComfyUI prompt history to prevent caching. Returns error or None."""
+        try:
+            response = requests.post(
+                f"{self.base_url}/history",
+                json={"clear": True},
+                timeout=10,
+            )
+            response.raise_for_status()
+            logger.info("ComfyUI history cleared")
+            return None
+        except requests.RequestException as e:
+            msg = f"Failed to clear ComfyUI history: {e}"
+            logger.warning(msg)
+            return msg
 
     def queue_prompt(self, workflow: dict) -> tuple[str | None, str | None]:
         """Returns (prompt_id, None) on success or (None, error_message) on failure."""

@@ -4,7 +4,7 @@ import time
 
 import boto3
 
-logger = logging.getLogger("wan_animate.s3_client")
+logger = logging.getLogger(__name__)
 
 
 class S3Client:

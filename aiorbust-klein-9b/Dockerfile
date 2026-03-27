@@ -8,23 +8,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Python packages
 RUN pip install --no-cache-dir runpod requests boto3 onnxruntime-gpu
 
-# SageAttention (pinned commit)
+# SageAttention: clone at build, build at runtime (needs GPU)
 RUN cd /tmp \
     && git clone https://github.com/thu-ml/SageAttention.git \
     && cd SageAttention \
-    && git reset --hard 68de379 \
-    && EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 pip install . \
-    && rm -rf /tmp/SageAttention
+    && git reset --hard 68de379
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}
 
-COPY handler.py /handler.py
-COPY comfy_api.py /comfy_api.py
-COPY downloader.py /downloader.py
-COPY s3_client.py /s3_client.py
-COPY workflow.json /workflow.json
-COPY start.sh /start.sh
+COPY shared/comfy_api.py /comfy_api.py
+COPY shared/downloader.py /downloader.py
+COPY shared/s3_client.py /s3_client.py
+COPY shared/handler_utils.py /handler_utils.py
+COPY aiorbust-klein-9b/handler.py /handler.py
+COPY aiorbust-klein-9b/workflow.json /workflow.json
+COPY aiorbust-klein-9b/start.sh /start.sh
 RUN chmod +x /start.sh
 
 CMD ["/start.sh"]

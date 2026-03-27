@@ -6,7 +6,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
-logger = logging.getLogger("wan_animate.downloader")
+logger = logging.getLogger(__name__)
 
 
 def _sanitize_url(url: str) -> str:

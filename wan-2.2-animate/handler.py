@@ -9,6 +9,7 @@ import runpod
 
 from comfy_api import ComfyApiClient, extract_media_items
 from downloader import download_files
+from handler_utils import _build_output_key, _cleanup_dirs, _dump_comfyui_log, _error, _load_workflow_template
 from s3_client import S3Client
 
 if not logging.getLogger().handlers:
@@ -23,8 +24,6 @@ GIT_COMMIT = os.getenv("GIT_COMMIT", "unknown")
 logger.info("=== wan-animate handler starting: commit=%s ===", GIT_COMMIT)
 
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
-WORKFLOW_PATH = os.getenv("WORKFLOW_PATH", "/workflow.json")
-COMFYUI_LOG_PATH = os.getenv("COMFYUI_LOG_PATH", "/ComfyUI/log.log")
 DOWNLOAD_WORKERS = int(os.getenv("DOWNLOAD_WORKERS", "4"))
 COMFY_RESULT_TIMEOUT_SECONDS = int(os.getenv("COMFY_RESULT_TIMEOUT_SECONDS", "7200"))
 
@@ -33,41 +32,12 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
 
 
-def _dump_comfyui_log(tail_lines: int = 100) -> None:
-    log_path = Path(COMFYUI_LOG_PATH)
-    if not log_path.exists():
-        logger.error("ComfyUI log not found at %s", COMFYUI_LOG_PATH)
-        return
-    lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
-    tail = lines[-tail_lines:]
-    logger.error("=== ComfyUI log (last %d lines of %d) ===", len(tail), len(lines))
-    for line in tail:
-        logger.error("[comfyui] %s", line)
-    logger.error("=== end of ComfyUI log ===")
-
-
-def _error(job_id, stage: str, message: str, started_at: float, dump_logs: bool = False) -> dict:
-    total_seconds = time.perf_counter() - started_at
-    logger.error("Job failed at %s: runpod_job_id=%s reason=%s duration=%.2fs", stage, job_id, message, total_seconds)
-    if dump_logs:
-        _dump_comfyui_log()
-    return {"error": f"{stage}: {message}"}
-
-
 def _pick_destination(destinations: list[str], allowed_extensions: set[str]) -> str:
     return next(
         destination
         for destination in destinations
         if Path(destination).suffix.lower() in allowed_extensions
     )
-
-
-def _load_workflow_template() -> str:
-    logger.info("Loading workflow template from %s", WORKFLOW_PATH)
-    with open(WORKFLOW_PATH, encoding="utf-8") as fp:
-        workflow_text = fp.read()
-    logger.info("Workflow template loaded (%d bytes)", len(workflow_text))
-    return workflow_text
 
 
 def _build_workflow(input_data: dict, downloaded_files: list[dict]) -> dict:
@@ -113,25 +83,13 @@ def _build_workflow(input_data: dict, downloaded_files: list[dict]) -> dict:
     return workflow
 
 
-def _build_output_key(job_id: str, filename: str, seen_names: dict[str, int]) -> tuple[str, str]:
-    base_name = Path(filename).name
-    counter = seen_names.get(base_name, 0)
-    seen_names[base_name] = counter + 1
-
-    if counter == 0:
-        final_name = base_name
-    else:
-        stem = Path(base_name).stem
-        suffix = Path(base_name).suffix
-        final_name = f"{stem}_{counter}{suffix}"
-
-    return f"run/{job_id}/{final_name}", final_name
-
-
 def handler(job):
     started_at = time.perf_counter()
     raw_job_id = job.get("id")
     logger.info("Job started: runpod_job_id=%s", raw_job_id)
+
+    # Stage 0: clean up from previous runs
+    _cleanup_dirs()
 
     # Stage 1: download inputs
     try:
@@ -158,6 +116,8 @@ def handler(job):
     if err := comfy.wait_for_ready():
         return _error(raw_job_id, "stage3/comfyui_ready", err, started_at, dump_logs=True)
     logger.info("Stage 3/6 complete: ComfyUI is ready")
+
+    comfy.clear_history()
 
     # Stage 4: queue prompt
     logger.info("Stage 4/6: queueing workflow prompt")
