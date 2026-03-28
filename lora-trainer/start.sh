@@ -156,12 +156,12 @@ fi
 # ============================================================
 status_msg "[2/3] Fetching latest updates..."
 
-run_quiet "torch"          pip install torch torchvision torchaudio
-run_quiet "transformers"   pip install transformers -U
-run_quiet "huggingface"    pip install --upgrade "huggingface_hub[cli]"
-run_quiet "peft"           pip install --upgrade "peft>=0.17.0"
-run_quiet "deepspeed"      pip install --upgrade "deepspeed>=0.17.6"
-run_quiet "diffusers"      bash -c "pip uninstall -y diffusers && pip install git+https://github.com/huggingface/diffusers"
+pip install torch torchvision torchaudio 2>&1
+pip install transformers -U 2>&1
+pip install --upgrade "huggingface_hub[cli]" 2>&1
+pip install --upgrade "peft>=0.17.0" 2>&1
+pip install --upgrade "deepspeed>=0.17.6" 2>&1
+pip uninstall -y diffusers && pip install git+https://github.com/huggingface/diffusers 2>&1
 
 # ============================================================
 # [3/3] Starting RunPod Handler
