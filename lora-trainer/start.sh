@@ -89,7 +89,7 @@ echo "================================================"
 # ============================================================
 # [1/3] Flash attention
 # ============================================================
-status_msg "[1/3] Installing flash attention..."
+status_msg "[1/2] Installing flash attention..."
 
 FLASH_ATTN_WHEEL_URL="https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.5.4/flash_attn-2.8.3+cu128torch2.9-cp312-cp312-linux_x86_64.whl"
 WHEEL_INSTALLED=false
@@ -152,21 +152,9 @@ if [ "$WHEEL_INSTALLED" = false ]; then
 fi
 
 # ============================================================
-# [2/3] Fetching latest package updates
+# [2/2] Starting RunPod Handler
 # ============================================================
-status_msg "[2/3] Fetching latest updates..."
-
-pip install torch torchvision torchaudio 2>&1
-pip install transformers -U 2>&1
-pip install --upgrade "huggingface_hub[cli]" 2>&1
-pip install --upgrade "peft>=0.17.0" 2>&1
-pip install --upgrade "deepspeed>=0.17.6" 2>&1
-pip uninstall -y diffusers && pip install git+https://github.com/huggingface/diffusers 2>&1
-
-# ============================================================
-# [3/3] Starting RunPod Handler
-# ============================================================
-status_msg "[3/3] Starting RunPod Handler..."
+status_msg "[2/2] Starting RunPod Handler..."
 
 echo ""
 echo "================================================"

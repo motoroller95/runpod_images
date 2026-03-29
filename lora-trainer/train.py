@@ -6,9 +6,7 @@ Replaces non-interactive-train.sh with proper logging and error handling.
 import logging
 import os
 import re
-import shutil
 import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -102,16 +100,15 @@ def download_models():
         return
 
     logger.info("Models: downloading %d missing files from %s", len(missing), HF_REPO)
-    cmd = ["huggingface-cli", "download", HF_REPO] + missing + ["--local-dir", str(models_dir)]
-
-    log_file = Path(NETWORK_VOLUME) / "logs" / "model_download.log"
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(log_file, "w") as lf:
-        proc = subprocess.run(cmd, stdout=lf, stderr=subprocess.STDOUT, timeout=10800)
-
-    if proc.returncode != 0:
-        raise RuntimeError(f"Model download failed (exit_code={proc.returncode}). Check {log_file}")
+    from huggingface_hub import hf_hub_download
+    for filename in missing:
+        logger.info("Models: downloading %s ...", filename)
+        hf_hub_download(
+            repo_id=HF_REPO,
+            filename=filename,
+            local_dir=str(models_dir),
+        )
+        logger.info("Models: downloaded %s", filename)
 
     # Verify
     still_missing = [f for f in MODEL_FILES if not (models_dir / f).exists()]
@@ -136,16 +133,6 @@ def setup_dataset_toml():
     text = text.replace("/video_dataset_here", f"{NETWORK_VOLUME}/video_dataset_here".replace("//", "/"))
     dataset_toml.write_text(text)
     logger.info("Dataset TOML: paths patched")
-
-
-def upgrade_packages():
-    """Upgrade transformers and peft."""
-    for pkg, spec in [("transformers", "transformers"), ("peft", "peft>=0.17.0")]:
-        logger.info("Upgrading %s...", pkg)
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--upgrade", spec, "-q"],
-            check=False,
-        )
 
 
 def run_training():
@@ -199,7 +186,6 @@ def main():
     setup_toml()
     download_models()
     setup_dataset_toml()
-    upgrade_packages()
     run_training()
 
     duration = time.perf_counter() - started_at
