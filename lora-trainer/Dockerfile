@@ -66,8 +66,8 @@ ENV GIT_COMMIT=${GIT_COMMIT}
 COPY shared/s3_client.py /s3_client.py
 COPY shared/downloader.py /downloader.py
 COPY lora-trainer/handler.py /handler.py
-COPY lora-trainer/non-interactive-train.sh /non-interactive-train.sh
+COPY lora-trainer/train.py /train.py
 COPY lora-trainer/start.sh /start.sh
-RUN chmod +x /start.sh /non-interactive-train.sh
+RUN chmod +x /start.sh
 
 CMD ["/start.sh"]

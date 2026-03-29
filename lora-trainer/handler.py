@@ -8,6 +8,7 @@ import runpod
 import requests
 
 from s3_client import S3Client
+from train import main as run_training
 
 if not logging.getLogger().handlers:
     logging.basicConfig(
@@ -22,7 +23,6 @@ logger.info("=== lora-trainer handler starting: commit=%s ===", GIT_COMMIT)
 
 DATASET_DIR = "/image_dataset_here"
 OUTPUT_DIR = "/output_folder/z_image_lora"
-TRAIN_SCRIPT = "/non-interactive-train.sh"
 
 
 def _download_archive(url: str, dest_path: str):
@@ -105,20 +105,10 @@ def handler(job):
     # Stage 3: run training
     logger.info("Stage 3: starting training")
     try:
-        result = subprocess.run(
-            ["bash", TRAIN_SCRIPT],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=7200,  # 2 hours max
-        )
-        logger.info("Training stdout:\n%s", result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
-    except subprocess.TimeoutExpired:
-        logger.error("Training timed out after 2 hours")
-        return {"error": "stage3/training: timeout after 2 hours"}
-    except subprocess.CalledProcessError as e:
-        logger.error("Training failed: exit_code=%d stderr=%s", e.returncode, e.stderr[-2000:] if e.stderr else "")
-        return {"error": f"stage3/training: exit_code={e.returncode}"}
+        run_training()
+    except Exception as e:
+        logger.exception("Training failed")
+        return {"error": f"stage3/training: {e}"}
 
     # Stage 4: upload results to S3
     logger.info("Stage 4: uploading results")
